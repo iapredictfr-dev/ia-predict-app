@@ -1843,4 +1843,100 @@ async function callIA(messages, mode='default', context=null) {
     } else if (apiUrl) {
       // Appel backend sécurisé
       const token = sb ? (await sb.auth.getSession()).data.session?.access_token : '';
-      const r = await fetch(`${apiUrl}/api/claude
+      const r = await fetch(`${apiUrl}/api/claude`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+        body: JSON.stringify({ messages, mode, restaurantContext })
+      });
+      const d = await r.json();
+      return d.content?.[0]?.text || d.error || null;
+
+    } else {
+      // Pas de config → simulation démo
+      return getDemoResponse(mode, messages[messages.length-1]?.content);
+    }
+  } catch(e) {
+    console.error('IA error:', e);
+    return getDemoResponse(mode, messages[messages.length-1]?.content);
+  }
+}
+
+function getDemoResponse(mode, lastMsg='') {
+  const responses = {
+    coach: (()=>{
+      const msg = (lastMsg||'').toLowerCase();
+      if(msg.includes('vendredi') || msg.includes('soir')) return '**Analyse vendredi soir** :\n\nRush Score prévu : 🟠 72/100 — effectifs légèrement tendus de 18h à 20h.\n\n**Recommandation** : Décaler Kevin de 16h30 à 17h00 et prolonger Leilani jusqu\'à 21h30.\n\n**Impact estimé** : Rush Score 🟠 72 → 🟢 88, temps Drive 2min48 → 2min12, coût supplémentaire +47€.\n\nLes deux disponibilités sont confirmées selon les contrats. Action à valider avant jeudi soir.';
+      if(msg.includes('planning') || msg.includes('semaine')) return '**Optimisation du planning hebdomadaire** :\n\nJ\'ai analysé votre semaine. Trois ajustements prioritaires :\n\n1. **Mardi** : sur-effectif 10h-11h30 (3 équipiers pour 15% de capacité) → décaler 1 arrivée à 11h30 = économie 47€\n2. **Jeudi soir** : effectif minimum atteint → prévoir 1 remplaçant en réserve (appel Kevin)\n3. **Samedi** : pic attendu +28% → maintenir 7 équipiers comme prévu ✓\n\n**Économie totale possible** : 47€/semaine · **Risque réduit** : jeudi soir sécurisé.';
+      if(msg.includes('masse salar') || msg.includes('coût')) return '**Analyse masse salariale** :\n\nRatio actuel estimé : **27,4% du CA** (objectif : <29%).\n\nVotre masse salariale est bien maîtrisée. Deux leviers d\'optimisation disponibles :\n\n1. **Créneaux creux** : lundi et mardi matin 10h-11h30 présentent un sur-effectif systématique → économie potentielle 180€/mois\n2. **Extras** : Kevin (Extra) peut être mobilisé uniquement les vendredis/samedis → réduction coût fixe\n\n**Gain estimé** : 220 à 350€/mois sans dégrader la qualité de service.';
+      if(msg.includes('drive') || msg.includes('temps')) return '**Analyse temps de service Drive** :\n\nTemps Drive actuel estimé : **2min34** (objectif : <3min00 ✓).\n\nVotre Drive est dans la zone verte. Points de vigilance :\n\n🟠 **Vendredi 18h-19h** : risque de dépasser 3min (affluence +35% estimée)\n🟠 **Samedi 12h-14h** : pic historique, prévoir rotation Drive toutes les 2h\n\n**Recommandation** : Ne jamais passer sous 2 équipiers au Drive pendant les rushs. Leilani est votre meilleur élément Drive (temps moyen estimé 2min08 avec elle).';
+      return '**Recommandation prioritaire** : Décaler Lucas de 11h30 à 11h00.\n\n**Raison** : CA prévisionnel +8% et météo ensoleillée (+12% affluence Drive).\n\n**Impact estimé** : Rush Score 🟠 → 🟢, temps Drive -18 secondes, coût supplémentaire : 0€.\n\n**Action** : Contactez Lucas pour confirmer. Disponibilité confirmée selon contrat.\n\n💡 *Mode démo — configurez votre clé API dans Paramètres pour des réponses personnalisées.*';
+    })(),
+    planning: `{"cout_total":5840,"notes":"Planning 7 jours optimisé. Rush midi et soir couverts à 95%+. Samedi renforcé pour affluence +25%. Jeudi soir : effectif minimum, pas de marge en cas d absence.","jours":{"Lundi":{"cout_jour":720,"equipe":[{"prenom":"Lucas","debut":"10:00","fin":"16:00","poste":"Drive","rush":false},{"prenom":"Marie","debut":"11:00","fin":"20:00","poste":"Bornes","rush":true},{"prenom":"Karim","debut":"12:00","fin":"21:00","poste":"Prepa","rush":true},{"prenom":"Thomas","debut":"11:30","fin":"15:30","poste":"Comptoir","rush":true}]},"Mardi":{"cout_jour":680,"equipe":[{"prenom":"Sofia","debut":"10:00","fin":"15:00","poste":"Caisse","rush":false},{"prenom":"Leilani","debut":"11:00","fin":"21:00","poste":"Drive","rush":true},{"prenom":"Thomas","debut":"12:00","fin":"20:00","poste":"Comptoir","rush":true},{"prenom":"Kevin","debut":"17:00","fin":"22:00","poste":"Prepa","rush":true}]},"Mercredi":{"cout_jour":750,"equipe":[{"prenom":"Lucas","debut":"10:00","fin":"18:00","poste":"Drive","rush":true},{"prenom":"Marie","debut":"11:00","fin":"20:00","poste":"Bornes","rush":true},{"prenom":"Karim","debut":"11:30","fin":"22:00","poste":"Prepa","rush":true},{"prenom":"Sofia","debut":"12:00","fin":"16:00","poste":"Caisse","rush":true}]},"Jeudi":{"cout_jour":700,"equipe":[{"prenom":"Thomas","debut":"10:00","fin":"16:00","poste":"Comptoir","rush":false},{"prenom":"Leilani","debut":"11:00","fin":"21:00","poste":"Drive","rush":true},{"prenom":"Kevin","debut":"17:00","fin":"23:00","poste":"Prepa","rush":true}]},"Vendredi":{"cout_jour":890,"equipe":[{"prenom":"Lucas","debut":"10:00","fin":"19:00","poste":"Drive","rush":true},{"prenom":"Marie","debut":"11:00","fin":"22:00","poste":"Bornes","rush":true},{"prenom":"Karim","debut":"11:00","fin":"22:00","poste":"Prepa","rush":true},{"prenom":"Leilani","debut":"11:30","fin":"21:30","poste":"Drive","rush":true},{"prenom":"Kevin","debut":"17:00","fin":"23:00","poste":"Comptoir","rush":true}]},"Samedi":{"cout_jour":960,"equipe":[{"prenom":"Lucas","debut":"10:00","fin":"20:00","poste":"Drive","rush":true},{"prenom":"Marie","debut":"10:00","fin":"21:00","poste":"Bornes","rush":true},{"prenom":"Karim","debut":"11:00","fin":"22:00","poste":"Prepa","rush":true},{"prenom":"Sofia","debut":"11:00","fin":"19:00","poste":"Caisse","rush":true},{"prenom":"Leilani","debut":"11:30","fin":"22:00","poste":"Drive","rush":true},{"prenom":"Thomas","debut":"12:00","fin":"18:00","poste":"Comptoir","rush":true},{"prenom":"Kevin","debut":"17:00","fin":"23:00","poste":"Prepa","rush":true}]},"Dimanche":{"cout_jour":740,"equipe":[{"prenom":"Marie","debut":"11:00","fin":"20:00","poste":"Bornes","rush":true},{"prenom":"Karim","debut":"11:00","fin":"21:00","poste":"Prepa","rush":true},{"prenom":"Sofia","debut":"12:00","fin":"18:00","poste":"Caisse","rush":true},{"prenom":"Leilani","debut":"11:30","fin":"21:30","poste":"Drive","rush":true}]}}}`,
+    twin: `**Point fort** : Avec 6 équipiers au midi, la couverture Drive est optimale (temps estimé 2min18).\n\n**Point de tension** : La montée en charge de 18h à 19h30 avec seulement 5 équipiers le soir crée un risque de saturation Bornes (temps estimé 4min45).\n\n**Ajustement recommandé** : +1 équipier Drive de 17h30 à 20h → Drive 2min18 → 1min55, Rush Score +8 points, coût +93€.`,
+    scores: `**Rush Score (68/100) — le plus critique** :\nCause : Effectifs légèrement insuffisants sur la fenêtre 18h-19h30.\nAction : Ajouter 1 équipier polyvalent Drive/Bornes sur ce créneau.\nDélai : Dès le prochain planning (cette semaine).\n\n**Staffing Score (72/100)** :\nCause : Sur-effectif léger le mardi matin (10h-12h).\nAction : Décaler 1 arrivée à 11h30.\nDélai : Immédiat.`,
+    default: `Bonjour ! Je suis l'assistant IA Predict. En mode démo, je simule des réponses. Pour activer l'IA réelle, configurez votre clé API ou URL backend dans Paramètres.`
+  };
+  return responses[mode] || responses.default;
+}
+
+// ════════════════════════════════════════════════════
+// SIDEBAR MOBILE
+// ════════════════════════════════════════════════════
+function toggleSidebar() {
+  const sb = document.querySelector('.sidebar');
+  const ov = document.getElementById('sidebar-overlay');
+  const isOpen = sb.classList.contains('open');
+  if(isOpen) { sb.classList.remove('open'); ov.classList.remove('open'); }
+  else { sb.classList.add('open'); ov.classList.add('open'); }
+}
+function closeSidebar() {
+  document.querySelector('.sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('open');
+}
+// Fermer sidebar sur clic nav item (mobile)
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.addEventListener('click', () => {
+      if(window.innerWidth <= 900) closeSidebar();
+    });
+  });
+});
+
+// ════════════════════════════════════════════════════
+// ADMIN — FONCTIONS SUPPLÉMENTAIRES
+// ════════════════════════════════════════════════════
+async function activateByEmail() {
+  const email = document.getElementById('manual-email').value.trim();
+  const tier = document.getElementById('manual-tier').value;
+  if (!email) return showToast('Email requis', 'error');
+  if (!sb) return showToast('Supabase non configuré', 'error');
+  const { data: profile } = await sb.from('profiles').select('*').eq('email', email).single();
+  if (!profile) return showToast('Aucun compte trouvé pour cet email', 'error');
+  await activateSubscription(profile.id, tier);
+  document.getElementById('manual-email').value = '';
+}
+
+async function loadAdminStats() {
+  if (!sb) return;
+  const { data: profiles } = await sb.from('profiles').select('role, subscription_tier, subscription_status, subscription_end');
+  if (!profiles) return;
+  const subs = profiles.filter(p => p.role === 'subscriber' && p.subscription_status === 'active');
+  const pending = profiles.filter(p => p.role === 'pending');
+  const mrr = subs.reduce((acc, p) => acc + (p.subscription_tier === 'fidelite' ? 99 : p.subscription_tier === 'reseau' ? 79 : 129), 0);
+  document.getElementById('admin-count-sub').textContent = subs.length;
+  document.getElementById('admin-count-pending').textContent = pending.length;
+  document.getElementById('admin-mrr').textContent = mrr.toLocaleString('fr-FR') + ' €';
+}
+
+// ════════════════════════════════════════════════════
+// TOAST
+// ════════════════════════════════════════════════════
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+</script>
+</body>
+</html>
