@@ -1,4 +1,15 @@
+// v2 - force rebuild + diagnostic clé API
 export default async function handler(req, res) {
+  if (req.method === 'GET') {
+    const key = process.env.ANTHROPIC_API_KEY || '';
+    return res.status(200).json({
+      debug: true,
+      keyPresente: !!key,
+      keyLongueur: key.length,
+      keyDebut: key ? key.slice(0, 7) + '...' : '(vide)'
+    });
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -13,12 +24,17 @@ export default async function handler(req, res) {
     default: `Tu es l'assistant IA d'IA Predict, expert restauration rapide.`
   };
 
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    return res.status(500).json({ error: 'ANTHROPIC_API_KEY absente côté serveur' });
+  }
+
   try {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'x-api-key': apiKey,
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
